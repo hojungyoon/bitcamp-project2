@@ -3,7 +3,6 @@ package com.eomcs.pms.domain;
 import java.sql.Date;
 
 public class Member {
-
   private int no;
   private String name;
   private String email;
@@ -32,12 +31,27 @@ public class Member {
   }
 
   public String toCsvString() {
-    return String.format("%d,%s,%s,%s,%s\n",
+    return String.format("%d,%s,%s,%s,%s,%s,%s", 
         this.getNo(),
         this.getName(),
         this.getEmail(),
+        this.getPassword(),
+        this.getPhoto(),
         this.getTel(),
-        this.getRegisteredDate().toString());
+        this.getRegisteredDate());
+  }
+
+  public static Member valueOfCsv(String csv) {
+    String[] fields = csv.split(",");
+    Member member = new Member();
+    member.setNo(Integer.parseInt(fields[0]));
+    member.setName(fields[1]);
+    member.setEmail(fields[2]);
+    member.setPassword(fields[3]);
+    member.setPhoto(fields[4]);
+    member.setTel(fields[5]);
+    member.setRegisteredDate(Date.valueOf(fields[6]));
+    return member;
   }
 
   @Override

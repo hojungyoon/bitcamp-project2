@@ -1,37 +1,33 @@
 package com.eomcs.pms.handler;
 
-import java.util.List;
-import com.eomcs.pms.domain.Member;
+import com.eomcs.driver.Statement;
 import com.eomcs.util.Prompt;
 
-public class MemberDeleteHandler extends AbstractMemberHandler {
+public class MemberDeleteHandler implements Command {
 
-  public MemberDeleteHandler(List<Member> memberList) {
-    super(memberList);
+  Statement stmt;
+
+  public MemberDeleteHandler(Statement stmt) {
+    this.stmt = stmt;
   }
 
   @Override
-  public void service() {
+  public void service() throws Exception {
     System.out.println("[회원 삭제]");
 
     int no = Prompt.inputInt("번호? ");
 
-    Member member = findByNo(no);
-    if (member == null) {
-      System.out.println("해당 번호의 회원이 없습니다.");
+    stmt.executeQuery("member/select", Integer.toString(no));
+
+    String input = Prompt.inputString("정말 삭제하시겠습니까?(y/N) ");
+    if (!input.equalsIgnoreCase("Y")) {
+      System.out.println("회원 삭제를 취소하였습니다.");
       return;
     }
 
-    String input = Prompt.inputString("정말 삭제하시겠습니까?(y/N) ");
+    stmt.executeUpdate("member/delete", Integer.toString(no));
 
-    if (input.equalsIgnoreCase("Y")) {
-      memberList.remove(member);
-      System.out.println("회원을 삭제하였습니다.");
-
-    } else {
-      System.out.println("회원 삭제를 취소하였습니다.");
-    }
-
+    System.out.println("회원을 삭제하였습니다.");
   }
 }
 
