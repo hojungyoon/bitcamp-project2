@@ -1,4 +1,4 @@
-package com.eomcs.pms.handler;
+package com.eomcs.handler;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -30,7 +30,7 @@ public class TaskDetailHandler implements Command {
                 + " from pms_task t "
                 + "   inner join pms_member m on t.owner=m.no"
                 + "   inner join pms_project p on t.project_no=p.no"
-                + " where t.no=?");) {
+                + " where t.no=?")) {
 
       stmt.setInt(1, no);
 
@@ -39,6 +39,7 @@ public class TaskDetailHandler implements Command {
           System.out.println("해당 번호의 작업이 없습니다.");
           return;
         }
+
         System.out.printf("프로젝트: %s\n", rs.getString("project_title"));
         System.out.printf("내용: %s\n", rs.getString("content"));
         System.out.printf("마감일: %s\n", rs.getDate("deadline"));

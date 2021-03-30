@@ -1,4 +1,4 @@
-package com.eomcs.pms.handler;
+package com.eomcs.handler;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -45,7 +45,7 @@ public class TaskAddHandler implements Command {
         return;
       }
       for (Project p : projects) {
-        System.out.printf("  %d,%s\n", p.getNo(), p.getTitle());
+        System.out.printf("  %d, %s\n", p.getNo(), p.getTitle());
       }
 
       // 3) 작업을 등록할 프로젝트를 선택한다.

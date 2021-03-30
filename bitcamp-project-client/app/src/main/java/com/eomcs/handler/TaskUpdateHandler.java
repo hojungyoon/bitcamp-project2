@@ -1,4 +1,4 @@
-package com.eomcs.pms.handler;
+package com.eomcs.handler;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -45,7 +45,6 @@ public class TaskUpdateHandler implements Command {
         PreparedStatement stmt2 = con.prepareStatement(
             "update pms_task set content=?,deadline=?,owner=?,status=? where no=?")) {
 
-
       Task task = new Task();
 
       // 1) 기존 데이터 조회
@@ -70,11 +69,12 @@ public class TaskUpdateHandler implements Command {
         task.setProjectTitle(rs.getString("project_title"));
       }
 
-      // 프로젝트 제목 출력
+      // 2) 프로젝트 제목 출력
       System.out.printf("현재 프로젝트: %s\n", task.getProjectTitle());
 
+      // 3) 현재 프로젝트 목록을 가져온다.
       List<Project> projects = new ArrayList<>();
-      try(PreparedStatement stmt3 = con.prepareStatement(
+      try (PreparedStatement stmt3 = con.prepareStatement(
           "select no,title from pms_project order by title asc");
           ResultSet rs = stmt3.executeQuery()) {
 
@@ -86,20 +86,23 @@ public class TaskUpdateHandler implements Command {
         }
       }
 
-      // 프로젝트 목록을 출력한다.
+      // 4) 프로젝트 목록을 출력한다.
       System.out.println("프로젝트들:");
       if (projects.size() == 0) {
         System.out.println("현재 등록된 프로젝트가 없습니다!");
         return;
       }
+      for (Project p : projects) {
+        System.out.printf("  %d, %s\n", p.getNo(), p.getTitle());
+      }
 
-      // 현재 작업이 소속된 프로젝트를 변경한다.
+      // 5) 현재 작업이 소속된 프로젝트를 변경한다.
       int selectedProjectNo = 0;
       loop: while (true) {
         try {
           selectedProjectNo = Prompt.inputInt("변경할 프로젝트 번호?(취소: 0) ");
           if (selectedProjectNo == 0) {
-            System.out.println("기존 프로젝트를 유지 합니다.");
+            System.out.println("기존 프로젝트를 유지합니다.");
             break loop;
           }
           for (Project p : projects) {
