@@ -1,48 +1,21 @@
 package com.eomcs.pms;
 
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import com.eomcs.handler.BoardAddHandler;
-import com.eomcs.handler.BoardDeleteHandler;
-import com.eomcs.handler.BoardDetailHandler;
-import com.eomcs.handler.BoardListHandler;
-import com.eomcs.handler.BoardSearchHandler;
-import com.eomcs.handler.BoardUpdateHandler;
-import com.eomcs.handler.Command;
-import com.eomcs.handler.MemberAddHandler;
-import com.eomcs.handler.MemberDeleteHandler;
-import com.eomcs.handler.MemberDetailHandler;
-import com.eomcs.handler.MemberListHandler;
-import com.eomcs.handler.MemberUpdateHandler;
-import com.eomcs.handler.MemberValidator;
-import com.eomcs.handler.ProjectAddHandler;
-import com.eomcs.handler.ProjectDeleteHandler;
-import com.eomcs.handler.ProjectDetailHandler;
-import com.eomcs.handler.ProjectListHandler;
-import com.eomcs.handler.ProjectUpdateHandler;
-import com.eomcs.handler.TaskAddHandler;
-import com.eomcs.handler.TaskDeleteHandler;
-import com.eomcs.handler.TaskDetailHandler;
-import com.eomcs.handler.TaskListHandler;
-import com.eomcs.handler.TaskUpdateHandler;
-import com.eomcs.pms.dao.BoardDao;
-import com.eomcs.pms.dao.MemberDao;
-import com.eomcs.pms.dao.ProjectDao;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import com.eomcs.util.Prompt;
 
 public class ClientApp {
-
-  // 사용자가 입력한 명령을 저장할 컬렉션 객체 준비
-  ArrayDeque<String> commandStack = new ArrayDeque<>();
-  LinkedList<String> commandQueue = new LinkedList<>();
 
   String serverAddress;
   int port;
 
   public static void main(String[] args) {
-    ClientApp app = new ClientApp("localhost", 8888);
+    String serverAddress = Prompt.inputString("서버 주소: ");
+    int serverPort = Prompt.inputInt("서버 포트: ");
+
+    ClientApp app = new ClientApp(serverAddress, serverPort);
 
     try {
       app.execute();
@@ -59,101 +32,61 @@ public class ClientApp {
   }
 
   public void execute() throws Exception {
+    // Stateful 통신 방식
+    try (
+        // 1) 서버와 연결하기
+        Socket socket = new Socket(serverAddress, port);
 
-    BoardDao boardDao = new BoardDao();
-    MemberDao memberDao = new MemberDao();
-    ProjectDao projectDao = new ProjectDao();
-
-    // 사용자 명령을 처리하는 객체를 맵에 보관한다.
-    HashMap<String,Command> commandMap = new HashMap<>();
-
-    MemberValidator memberValidator = new MemberValidator(memberDao);
-
-    commandMap.put("/board/add", new BoardAddHandler(boardDao));
-    commandMap.put("/board/list", new BoardListHandler(boardDao));
-    commandMap.put("/board/detail", new BoardDetailHandler(boardDao));
-    commandMap.put("/board/update", new BoardUpdateHandler(boardDao));
-    commandMap.put("/board/delete", new BoardDeleteHandler(boardDao));
-    commandMap.put("/board/search", new BoardSearchHandler(boardDao));
-
-    commandMap.put("/member/add", new MemberAddHandler(memberDao));
-    commandMap.put("/member/list", new MemberListHandler(memberDao));
-    commandMap.put("/member/detail", new MemberDetailHandler(memberDao));
-    commandMap.put("/member/update", new MemberUpdateHandler(memberDao));
-    commandMap.put("/member/delete", new MemberDeleteHandler(memberDao));
-
-    commandMap.put("/project/add", new ProjectAddHandler(projectDao, memberValidator));
-    commandMap.put("/project/list", new ProjectListHandler(projectDao));
-    commandMap.put("/project/detail", new ProjectDetailHandler(projectDao));
-    commandMap.put("/project/update", new ProjectUpdateHandler(projectDao, memberValidator));
-    commandMap.put("/project/delete", new ProjectDeleteHandler(projectDao));
-
-    commandMap.put("/task/add", new TaskAddHandler(memberValidator));
-    commandMap.put("/task/list", new TaskListHandler());
-    commandMap.put("/task/detail", new TaskDetailHandler());
-    commandMap.put("/task/update", new TaskUpdateHandler(memberValidator));
-    commandMap.put("/task/delete", new TaskDeleteHandler());
-
-    try {
+        // 2) 데이터 입출력 스트림 객체를 준비
+        PrintWriter out = new PrintWriter(socket.getOutputStream());
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        ) {
 
       while (true) {
-
         String command = com.eomcs.util.Prompt.inputString("명령> ");
-
         if (command.length() == 0) {
           continue;
         }
 
-        // 사용자가 입력한 명령을 보관해둔다.
-        commandStack.push(command);
-        commandQueue.offer(command);
+        // 서버에게 명령을 보낸다.
+        out.println(command);
+        out.println();
+        out.flush();
 
-        try {
-          switch (command) {
-            case "history":
-              printCommandHistory(commandStack.iterator());
-              break;
-            case "history2": 
-              printCommandHistory(commandQueue.iterator());
-              break;
-            case "quit":
-            case "exit":
-              System.out.println("안녕!");
-              return;
-            default:
-              Command commandHandler = commandMap.get(command);
+        // 서버가 보낸 데이터를 출력한다.
+        String line = null;
+        while (true) {
+          line = in.readLine();
 
-              if (commandHandler == null) {
-                System.out.println("실행할 수 없는 명령입니다.");
-              } else {
-                commandHandler.service();
-              }
+          if (line.length() == 0) {
+            break;
+
+          } else if (line.equals("!{}!")) {
+            // 서버에서 입력을 요구 한다면
+            // - 사용자로부터 입력을 받는다.
+            String input = Prompt.inputString("입력> ");
+
+            // - 입력받은 내용을 서버에게 보낸다.
+            out.println(input);
+            out.flush();
+          } else {
+            System.out.println(line);
           }
-        } catch (Exception e) {
-          System.out.println("------------------------------------------");
-          System.out.printf("명령어 실행 중 오류 발생: %s\n", e.getMessage());
-          System.out.println("------------------------------------------");
         }
         System.out.println(); // 이전 명령의 실행을 구분하기 위해 빈 줄 출력
-      }
 
-    } catch (Exception e) {
-      System.out.println("서버와 통신 하는 중에 오류 발생!");
-    }
-
-    Prompt.close();
-  }
-
-  private void printCommandHistory(Iterator<String> iterator) {
-    int count = 0;
-    while (iterator.hasNext()) {
-      System.out.println(iterator.next());
-      if ((++count % 5) == 0) {
-        String input = Prompt.inputString(": ");
-        if (input.equalsIgnoreCase("q")) {
+        if (command.equalsIgnoreCase("quit") || 
+            command.equalsIgnoreCase("exit") ||
+            command.equalsIgnoreCase("serverstop")) {
+          System.out.println("안녕!");
           break;
         }
       }
+
+    } catch (Exception e) {
+      System.out.println("통신 오류 발생!");
     }
+
+    Prompt.close();
   }
 }
